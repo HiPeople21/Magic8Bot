@@ -72,8 +72,9 @@ func MessageHandler(session *discordgo.Session, message *discordgo.MessageCreate
       session.ChannelMessageSendEmbed(message.ChannelID, embed)
       return
     }
-
-    response := GetResponse(question)
+    channel := make(chan ResponseMagic)
+    go GetResponse(question, channel)
+    response := <-channel
     embed := &discordgo.MessageEmbed{
       Title: response.Response.Answer,
       Fields: []*discordgo.MessageEmbedField{
@@ -85,7 +86,7 @@ func MessageHandler(session *discordgo.Session, message *discordgo.MessageCreate
           Name: "Type",
           Value: response.Response.Type,
         },
-      }
+      },
     }
 
     session.ChannelMessageSendEmbed(message.ChannelID, embed)
@@ -93,10 +94,10 @@ func MessageHandler(session *discordgo.Session, message *discordgo.MessageCreate
 }
 
 
-func GetResponse(question string) ResponseMagic {
+func GetResponse(question string, channel chan ResponseMagic) {
   res, err := http.Get("https://8ball.delegator.com/magic/JSON/" + question)
   if err != nil {
-    return ResponseMagic{
+    channel<-ResponseMagic{
       Response: Response{
         Question: question,
         Answer: "Error. Please try again.",
@@ -107,7 +108,7 @@ func GetResponse(question string) ResponseMagic {
 
   responseData, err := ioutil.ReadAll(res.Body)
   if err != nil {
-    return ResponseMagic{
+    channel<-ResponseMagic{
       Response: Response{
         Question: question,
         Answer: "Error. Please try again.",
@@ -121,5 +122,5 @@ func GetResponse(question string) ResponseMagic {
   if jsonErr != nil {
 		log.Fatal(jsonErr)
 	}
-  return responseObject
+  channel<-responseObject
 }
