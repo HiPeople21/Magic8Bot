@@ -117,7 +117,7 @@ func main() {
     fmt.Println(err.Error())
     return
   }
-
+  go KeepAlive()
   defer discord.Close()
   <- make(chan struct{})
   return
@@ -216,4 +216,13 @@ func GetResponse(question string, channel chan ResponseMagic) {
     }
 	}
   channel<-responseObject
+}
+
+func KeepAlive(){
+  http.HandleFunc("/", IndexHandler)
+  http.ListenAndServe(":8000", nil)
+}
+
+func IndexHandler(w http.ResponseWriter, r *http.Request){
+  fmt.Fprintf(w, "Whoa, Go is neat!")
 }
