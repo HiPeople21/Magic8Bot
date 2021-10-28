@@ -1,2 +1,4 @@
 # Magic8Bot
-How to use: `!magic8 (question)`
+How to use:
+- Typeing: `!magic8 (question)`
+- Using the Slash Command: `/magic8`
