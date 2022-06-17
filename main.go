@@ -4,12 +4,10 @@ import (
   "os"
   "fmt"
   "strings"
-  "io/ioutil"
-  "encoding/json"
   "net/http"
   "log"
   "flag"
-
+  "math/rand"
   "github.com/bwmarrin/discordgo"
 )
 
@@ -25,10 +23,47 @@ type Response struct {
 
 var (
 	GuildID        = flag.String("guild", "", "Test guild ID. If not passed - bot registers commands globally")
+    
 	RemoveCommands = flag.Bool("rmcmd", true, "Remove all commands after shutdowning or not")
 )
-func init() { flag.Parse() }
+
 var BotID string
+
+var Keys = []string{
+    "Affirmative",
+    "Non-committal",
+    "Negative",
+}
+
+var Responses = map[string][]string{
+    "Affirmative": {
+        "It is certain.",
+        "It is decidedly so.",
+        "Without a doubt.",
+        "Yes definitely.",
+        "You may rely on it.",
+        "As I see it, yes.",
+        "Most likely.",
+        "Outlook good.",
+        "Yes.",
+        "Signs point to yes.",
+    },
+    "Non-committal": {
+        "Reply hazy, try again.",
+        "Ask again later.",
+        "Better not tell you now.",
+        "Cannot predict now.",
+        "Concentrate and ask again.",
+    },
+    "Negative": {
+        "Don't count on it.",
+        "My reply is no.",
+        "My sources say no.",
+        "Outlook not so good.",
+        "Very doubtful.",
+    },
+}
+
 var commands = []*discordgo.ApplicationCommand{
   {
     Name: "magic8",
@@ -57,7 +92,7 @@ var commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.Interac
             Value: response.Response.Question,
           },
           &discordgo.MessageEmbedField{
-            Name: "Type",
+            Name: "Answer Type",
             Value: response.Response.Type,
           },
         },
@@ -117,9 +152,13 @@ func main() {
     fmt.Println(err.Error())
     return
   }
+    
   go KeepAlive()
+    
   defer discord.Close()
+    
   <- make(chan struct{})
+    
   return
 }
 
@@ -157,7 +196,7 @@ func MessageHandler(session *discordgo.Session, message *discordgo.MessageCreate
           Value: response.Response.Question,
         },
         &discordgo.MessageEmbedField{
-          Name: "Type",
+          Name: "Answer Type",
           Value: response.Response.Type,
         },
         &discordgo.MessageEmbedField{
@@ -171,50 +210,19 @@ func MessageHandler(session *discordgo.Session, message *discordgo.MessageCreate
   }
 }
 
-func HandlePanic() {
-  if r := recover(); r!= nil {
-        fmt.Println("recovered from ", r)
-  }
-}
-
 
 func GetResponse(question string, channel chan ResponseMagic) {
-  defer HandlePanic()
   
-  
-  res, err := http.Get("https://8ball.delegator.com/magic/JSON/" + question)
-  if err != nil {
-    channel<-ResponseMagic{
-      Response: Response{
-        Question: question,
-        Answer: "Error. Please try again.",
-        Type: "N/A",
-      },
-    }
-  }
+  type_ := Keys[rand.Intn(len(Keys))]
 
-  responseData, err := ioutil.ReadAll(res.Body)
-  if err != nil {
-    channel<-ResponseMagic{
+  answer := Responses[type_][rand.Intn(len(Responses[type_]))]
+  responseObject := ResponseMagic{
       Response: Response{
-        Question: question,
-        Answer: "Error. Please try again.",
-        Type: "N/A",
+          Question: question,
+          Answer: answer,
+          Type: type_,
       },
-    }
   }
-
-  var responseObject ResponseMagic
-  jsonErr := json.Unmarshal(responseData, &responseObject)
-  if jsonErr != nil {
-		channel<-ResponseMagic{
-      Response: Response{
-        Question: question,
-        Answer: "Error. Cannot accept questions with '/' or a single backslash.",
-        Type: "N/A",
-      },
-    }
-	}
   channel<-responseObject
 }
 
@@ -224,5 +232,5 @@ func KeepAlive(){
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request){
-  fmt.Fprintf(w, "Whoa, Go is neat!")
+  fmt.Fprintf(w, "<a href='https://www.youtube.com/watch?v=dQw4w9WgXcQ'>Click here</a>")
 }
